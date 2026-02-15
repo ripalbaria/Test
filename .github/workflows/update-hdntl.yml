@@ -1,0 +1,45 @@
+name: Auto Update hdntl
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Extract hdntl from redirect
+        run: |
+          SOURCE_URL="http://mini.allinonereborn.fun/zee_paid/index.php?id=0-9-tvpictureshd"
+
+          USER_AGENT="Mozilla/5.0 (Linux; Android 10; Pixel 3 XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+
+          echo "Getting final redirected URL..."
+
+          FINAL_URL=$(curl -s -L -A "$USER_AGENT" -o /dev/null -w "%{url_effective}" "$SOURCE_URL")
+
+          echo "Final URL:"
+          echo "$FINAL_URL"
+
+          NEW_TOKEN=$(echo "$FINAL_URL" | grep -o 'hdntl=[^"&]*')
+
+          if [ -z "$NEW_TOKEN" ]; then
+            echo "No token found. Skipping update."
+            exit 0
+          fi
+
+          echo "Found token:"
+          echo "$NEW_TOKEN"
+
+          sed -i "s|hdntl=[^\"&]*|$NEW_TOKEN|g" jiotv-mb.m3u
+
+      - name: Commit & Push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add jiotv-mb.m3u
+          git commit -m "Auto updated hdntl token" || echo "No changes"
+          git push
